@@ -1,0 +1,9 @@
+2020.05.27 08:01:36 INFO  started: Metals version 0.9.0 in workspace '/Users/mike/Documents/tripl.ai/delta'
+2020.05.27 08:01:37 INFO  time: initialize in 0.37s
+2020.05.27 08:01:39 INFO  no build target: using presentation compiler with only scala-library
+2020.05.27 08:01:41 WARN  no build target for: /Users/mike/Documents/tripl.ai/delta/src/main/scala/org/apache/spark/sql/delta/commands/MergeIntoCommand.scala
+May 27, 2020 8:01:41 AM org.eclipse.lsp4j.jsonrpc.RemoteEndpoint handleCancellation
+WARNING: Unmatched cancel notification for request id 1
+2020.05.27 08:02:30 WARN  no build target for: /Users/mike/Documents/tripl.ai/delta/src/main/scala/org/apache/spark/sql/delta/commands/MergeIntoCommand.scala
+2020.05.27 08:02:36 WARN  no build target for: /Users/mike/Documents/tripl.ai/delta/src/test/scala/org/apache/spark/sql/delta/MergeIntoSuiteBase.scala
+2020.05.27 08:02:43 WARN  no build target for: /Users/mike/Documents/tripl.ai/delta/src/test/scala/org/apache/spark/sql/delta/MergeIntoSuiteBase.scala
