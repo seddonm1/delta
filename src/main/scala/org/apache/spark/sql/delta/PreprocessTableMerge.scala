@@ -30,7 +30,15 @@ import org.apache.spark.sql.internal.SQLConf
 case class PreprocessTableMerge(conf: SQLConf) extends UpdateExpressionsSupport {
 
   def apply(mergeInto: DeltaMergeInto): MergeIntoCommand = {
-    val DeltaMergeInto(target, source, condition, matched, notMatched, migratedSchema) = mergeInto
+    val DeltaMergeInto(
+      target,
+      source,
+      condition,
+      matched,
+      notMatchedByTarget,
+      notMatchedBySource,
+      migratedSchema
+    ) = mergeInto
 
     def checkCondition(cond: Expression, conditionName: String): Unit = {
       if (!cond.deterministic) {
@@ -48,7 +56,9 @@ case class PreprocessTableMerge(conf: SQLConf) extends UpdateExpressionsSupport 
     }
 
     checkCondition(condition, "search")
-    (matched ++ notMatched).filter(_.condition.nonEmpty).foreach { clause =>
+    (matched ++ notMatchedByTarget ++ notMatchedBySource)
+      .filter(_.condition.nonEmpty)
+      .foreach { clause =>
       checkCondition(clause.condition.get, clause.clauseType.toUpperCase(Locale.ROOT))
     }
 
@@ -58,7 +68,7 @@ case class PreprocessTableMerge(conf: SQLConf) extends UpdateExpressionsSupport 
         // update clause.
         val existingColumns = m.resolvedActions.map(_.targetColNameParts.head) ++
           target.output.map(_.name)
-        val newColsFromInsert = notMatched.toSeq.flatMap {
+        val newColsFromInsert = notMatchedByTarget.toSeq.flatMap {
           _.resolvedActions.filterNot { insertAct =>
             existingColumns.exists { colName =>
               conf.resolver(insertAct.targetColNameParts.head, colName)
@@ -109,10 +119,10 @@ case class PreprocessTableMerge(conf: SQLConf) extends UpdateExpressionsSupport 
 
         m.copy(m.condition, alignedActions)
 
-      case m: DeltaMergeIntoDeleteClause => m    // Delete does not need reordering
+      case m: DeltaMergeIntoMatchedDeleteClause => m    // Delete does not need reordering
     }
 
-    val processedNotMatched = notMatched.map { m =>
+    val processedNotMatchedByTarget = notMatchedByTarget.map { m =>
       // Check if columns are distinct. All actions should have targetColNameParts.size = 1.
       m.resolvedActions.foreach { a =>
         if (a.targetColNameParts.size > 1) {
@@ -167,13 +177,24 @@ case class PreprocessTableMerge(conf: SQLConf) extends UpdateExpressionsSupport 
       m.copy(m.condition, alignedActions)
     }
 
+    val processedNotMatchedBySource = notMatchedBySource.map {
+      case m: DeltaMergeIntoNotMatchedDeleteClause => m    // Delete does not need reordering
+    }
+
     val tahoeFileIndex = EliminateSubqueryAliases(target) match {
       case DeltaFullTable(index) => index
       case o => throw DeltaErrors.notADeltaSourceException("MERGE", Some(o))
     }
 
     MergeIntoCommand(
-      source, target, tahoeFileIndex, condition,
-      processedMatched, processedNotMatched, migratedSchema)
+      source,
+      target,
+      tahoeFileIndex,
+      condition,
+      processedMatched,
+      processedNotMatchedByTarget,
+      processedNotMatchedBySource,
+      migratedSchema
+    )
   }
 }
