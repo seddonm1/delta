@@ -20,7 +20,9 @@
 .pydevproject
 .scala_dependencies
 .settings
-.metals
+.metals/
+.bloop/
+project/metals.sbt
 /lib/
 R-unit-tests.log
 R/unit-tests.out

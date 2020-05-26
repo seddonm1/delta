@@ -25,7 +25,7 @@ import org.apache.spark.sql.delta.util.AnalysisHelper
 
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.{Alias, And, AnsiCast, Cast, CreateStruct, Expression, GetStructField, NamedExpression, UpCast}
-import org.apache.spark.sql.catalyst.plans.logical.{AppendData, DeleteAction, DeleteFromTable, DeltaDelete, DeltaMergeInto, DeltaMergeIntoClause, DeltaMergeIntoDeleteClause, DeltaMergeIntoInsertClause, DeltaMergeIntoUpdateClause, DeltaUpdateTable, Filter, InsertAction, InsertIntoStatement, LogicalPlan, MergeIntoTable, OverwriteByExpression, Project, SubqueryAlias, UpdateAction, UpdateTable}
+import org.apache.spark.sql.catalyst.plans.logical.{AppendData, DeleteAction, DeleteFromTable, DeltaDelete, DeltaMergeInto, DeltaMergeIntoClause, DeltaMergeIntoMatchedDeleteClause, DeltaMergeIntoNotMatchedDeleteClause, DeltaMergeIntoInsertClause, DeltaMergeIntoUpdateClause, DeltaUpdateTable, Filter, InsertAction, InsertIntoStatement, LogicalPlan, MergeIntoTable, OverwriteByExpression, Project, SubqueryAlias, UpdateAction, UpdateTable}
 import org.apache.spark.sql.catalyst.rules.Rule
 import org.apache.spark.sql.connector.catalog.Identifier
 import org.apache.spark.sql.execution.datasources.LogicalRelation
@@ -113,7 +113,7 @@ class DeltaAnalysis(session: SparkSession, conf: SQLConf)
             update.condition,
             DeltaMergeIntoClause.toActions(update.assignments))
         case delete: DeleteAction =>
-          DeltaMergeIntoDeleteClause(delete.condition)
+          DeltaMergeIntoMatchedDeleteClause(delete.condition)
         case insert =>
           throw new AnalysisException(
             "Insert clauses cannot be part of the WHEN MATCHED clause in MERGE INTO.")
