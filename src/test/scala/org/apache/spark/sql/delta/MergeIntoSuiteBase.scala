@@ -1130,8 +1130,7 @@ abstract class MergeIntoSuiteBase
     ) {
     def sql: String = {
       assert(action != null, "action not specified yet")
-      val matched = if (isMatched) "MATCHED"
-        else s"NOT MATCHED BY ${if (notMatchedTarget) "TARGET" else "SOURCE"}"
+      val matched = if (isMatched) "MATCHED" else "NOT MATCHED"
       val cond = if (condition != null) s"AND $condition" else ""
       s"WHEN $matched $cond THEN $action"
     }
@@ -1147,10 +1146,6 @@ abstract class MergeIntoSuiteBase
 
   protected def insert(values: String = null, condition: String = null): MergeClause = {
     MergeClause(isMatched = false, condition, s"INSERT $values", true)
-  }
-
-  protected def deleteNotMatch(values: String = null, condition: String = null): MergeClause = {
-    MergeClause(isMatched = false, condition, s"DELETE", false)
   }
 
   protected def testAnalysisErrorsInExtendedMerge(
@@ -1345,52 +1340,6 @@ abstract class MergeIntoSuiteBase
     result = Seq(
       (2, 20),  // (2, 2) updated, (1, 1) deleted as it did not match update condition
       (3, 3)
-    ))
-
-  testExtendedMerge("only deleteNotMatch")(
-    source = (1, 10) :: (2, 20) :: (3, 30) :: Nil,
-    target = (0, 0) :: (1, 10) :: (2, 20) :: Nil,
-    mergeOn = "s.key = t.key",
-    deleteNotMatch())(
-    result = Seq(
-      (1, 10), // (0, 0) deleted
-      (2, 20)
-    )) // (3, 30) not inserted as not insert clause
-
-  test(s"extended syntax - only deleteNotMatch with multiple matches") {
-    withKeyValueData(
-      source = (0, 0) :: (1, 10) :: (1, 100) :: (3, 30) :: Nil,
-      target = (1, 1) :: (2, 2) :: Nil
-    ) { case (sourceName, targetName) =>
-      intercept[UnsupportedOperationException] {
-        executeMerge(s"$targetName t", s"$sourceName s", "s.key = t.key", deleteNotMatch())
-      }
-    }
-  }
-
-  testExtendedMerge("only conditional deleteNotMatch")(
-    source = (2, 20) :: (3, 30) :: Nil,
-    target = (0, 0) :: (1, 1) :: (2, 2) :: (3, 3) :: Nil,
-    mergeOn = "s.key = t.key",
-    deleteNotMatch(condition = "t.value <> 0"))(
-    result = Seq(
-      (0, 0),   // not deleted due to target-only condition `t.value <> 0`
-      (2, 2),
-      (3, 3)
-    )) // (1, 1) deleted
-
-  testExtendedMerge("conditional update + deleteMatch + deleteNotMatch")(
-    source = (0, 0) :: (1, 10) :: (2, 20) :: Nil,
-    target = (1, 1) :: (2, 2) :: (3, 3) :: Nil,
-    mergeOn = "s.key = t.key",
-    update(condition = "s.key <> 1", set = "key = s.key, value = s.value"),
-    deleteMatch(),
-    deleteNotMatch())(
-    result = Seq(
-      // (0, 0) skipped as no insert condition
-      // (1, 1) deleted as it did not match update condition (deleteMatch)
-      (2, 20)  // (2, 2) updated,
-      // (3, 3) deleted as it did not have a source row (deleteNotMatch)
     ))
 
   testExtendedMerge("conditional update + conditional deleteMatch")(
@@ -2235,4 +2184,5 @@ abstract class MergeIntoSuiteBase
     expectErrorContains = "cannot cast struct",
     expectErrorWithoutEvolutionContains = "cannot cast struct"
   )
+
 }

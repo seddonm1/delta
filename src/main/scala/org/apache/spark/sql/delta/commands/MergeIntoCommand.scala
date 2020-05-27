@@ -629,12 +629,12 @@ object MergeIntoCommand {
 
       }
 
-      val toRow = joinedRowEncoder.toRow _
-      val fromRow = outputRowEncoder.fromRow _
+      val toRow = joinedRowEncoder.createSerializer()
+      val fromRow = outputRowEncoder.resolveAndBind().createDeserializer()
       rowIterator
-        .map { joinedRowEncoder.toRow }
+        .map { row => toRow(row) }
         .map { row => processRow(row, joinedRowEncoder.schema.fieldIndex(FILE_NAME_COL)) }
-        .map { row => outputRowEncoder.fromRow(outputProj(row)) }
+        .map { row => fromRow(outputProj(row)) }
     }
   }
 }

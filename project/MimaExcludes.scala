@@ -76,7 +76,12 @@ object MimaExcludes {
       ProblemFilters.exclude[DirectMissingMethodProblem]("io.delta.tables.DeltaMergeBuilder.initializeLogIfNecessary$default$2"),
 
       // Changes in 0.7.0
-      ProblemFilters.exclude[DirectMissingMethodProblem]("io.delta.tables.DeltaTable.makeUpdateTable")
+      ProblemFilters.exclude[DirectMissingMethodProblem]("io.delta.tables.DeltaTable.makeUpdateTable"),
+
+      // customisations
+      ProblemFilters.exclude[IncompatibleResultTypeProblem]("io.delta.tables.DeltaMergeBuilder.whenNotMatched"),
+      ProblemFilters.exclude[MissingClassProblem]("io.delta.tables.DeltaMergeNotMatchedActionBuilder"),
+      ProblemFilters.exclude[MissingClassProblem]("io.delta.tables.DeltaMergeNotMatchedActionBuilder$")      
   )
 }
 

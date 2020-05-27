@@ -530,4 +530,82 @@ class MergeIntoScalaSuite extends MergeIntoSuiteBase  with DeltaSQLCommandTest {
       nameOrPath.stripPrefix("delta.`").stripSuffix("`")
     } else nameOrPath
   }
+
+
+
+ test("when not matched by source - only delete") {
+    withTable("source") {
+      append(Seq((0, 0),(1, 10),(2, 20)).toDF("key1", "value1"), Nil)  // target
+      val source = Seq((1, 10),(2, 20),(3, 30)).toDF("key2", "value2")  // source
+
+      io.delta.tables.DeltaTable.forPath(spark, tempPath)
+        .merge(source, "key1 = key2")
+        .whenNotMatchedBySource().delete()
+        .execute()
+
+      checkAnswer(
+        readDeltaTable(tempPath),
+        // Row(0, 0)      // Deleted
+        Row(1, 10) ::     // No change
+        Row(2, 20) ::     // No change
+        Nil)
+    }
+  }
+
+  test("when not matched by source - multiple matches") {
+    withTable("source") {
+      append(Seq((1, 1),(2, 2)).toDF("key1", "value1"), Nil)  // target
+      val source = Seq((0, 0),(1, 10),(1, 100),(3, 30)).toDF("key2", "value2")  // source
+
+      intercept[UnsupportedOperationException] {
+      io.delta.tables.DeltaTable.forPath(spark, tempPath)
+        .merge(source, "key1 = key2")
+        .whenNotMatchedBySource().delete()
+        .execute()
+      }
+    }
+  }
+
+  test("when not matched by source - conditional") {
+    withTable("source") {
+      append(Seq((0, 0),(1, 1),(2, 2),(3, 3)).toDF("key1", "value1"), Nil)  // target
+      val source = Seq((2, 20),(3, 30)).toDF("key2", "value2")  // source
+
+      io.delta.tables.DeltaTable.forPath(spark, tempPath)
+        .merge(source, "key1 = key2")
+        .whenNotMatchedBySource(condition = "key1 <> 0").delete()
+        .execute()
+
+      checkAnswer(
+        readDeltaTable(tempPath),
+        Row(0, 0) ::     // Not deleted
+        // Row(1, 1) ::  // Deleted
+        Row(2, 2) ::     // No change
+        Row(3, 3) ::     // No change
+        Nil)        
+    }
+  }
+
+  test("when not matched by source - insert + conditional update + delete") {
+    withTable("source") {
+      append(Seq((1, 1),(2, 2),(3, 3)).toDF("key1", "value1"), Nil)  // target
+      val source = Seq((1, 10),(2, 20),(4,40)).toDF("key2", "value2")  // source
+
+      io.delta.tables.DeltaTable.forPath(spark, tempPath)
+        .merge(source, "key1 = key2")
+        .whenMatched("key2 <> 1").updateExpr(Map("key1" -> "key2", "value1" -> "value2"))
+        .whenNotMatchedByTarget().insertExpr(Map("key1" -> "key2", "value1" -> "value2"))
+        .whenNotMatchedBySource().delete()
+        .execute()
+
+      checkAnswer(
+        readDeltaTable(tempPath),
+        Row(1, 1) ::     // Unchanged as not in whenMatched condition
+        Row(2, 20) ::    // Updated from (2, 2)
+        //Row(3, 3) ::   // deleted as it did not have a source row (whenNotMatchedBySource)
+        Row(4, 40) ::    // inserted by (whenNotMatchedByTarget)
+        Nil)        
+    }
+  }  
+  
 }
